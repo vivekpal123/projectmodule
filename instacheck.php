@@ -10,33 +10,19 @@ define('Client_Secret',"64dd56e9c5304567b2a4e1b97ab41bf8");
 define('RedirectURI',"http://localhost/user_module/instacheck.php");
 define('ImageDirectory',"Pics/");
 
-
-if(isset($_GET['code']))
+if(isset($_GET['access_token']))
 {
-  $code = $_GET['code'];
-  $url = "https://api.instagram.com/oauth/access_token";    
 
-$access_token_setting = array(
-    'client_id'         =>client_id,
-    'Client_Secret'     =>Client_Secret,
-    'Grant_type'        =>'authorization_code',
-    'RedirectURI'       =>RedirectURI,
-    'code'              =>$code
-);  
-   
+  $code = $_GET['access_token'];
+    echo $code;exit;
+   $result = curl_exec($ch);
+   curl_close($ch);
+   return $result;
     
-    $curl = curl_init($url);
-    curl_setopt($curl,CURLOPT_POST,true);
-    curl_setopt($curl,CURLOPT_POSTFIELDS,$access_token_setting);
-    curl_setopt($curl,CURLOPT_RETURNTRANSFER,1);
-    curl_setopt($curl,CURLOPT_SSL_VERIFYPEER,false);
-    
-    $result = curl_exec($curl);
-    curl_close($curl);
     
     $result = json_decode($result,true);
-    print_r($result);
-    echo $result['users']['username'];
+    echo $result['user']['id'];
+    
     
 }
 

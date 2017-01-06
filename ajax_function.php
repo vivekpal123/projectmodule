@@ -8,25 +8,15 @@ require 'PHPMailer-master/PHPMailerAutoload.php';
 
 
 
-if(!empty($_POST['task_id']) && !empty($_POST['stat']))
-{
-    $status = mysqli_real_escape_string($conn,$_POST['stat']);
-    $t_id = mysqli_real_escape_string($conn,$_POST['task_id']);
-    
-     $updated_response = $crud->update_task_status($t_id,$status,$conn);
-   echo $updated_response;
-        
-    
-}
-
     
     // call after  status change 
-if(!empty($_POST['status']) && !empty($_POST['t_id']) && !empty($_POST['total']) && !empty($_POST['t_percent']) && !empty($_POST['m_percent']) && !empty($_POST['s_percent']) && !empty($_POST['m_id'])  && !empty($_POST['s_id'])  && !empty($_POST['pcalc'])  && !empty($_POST['count']))
+if(!empty($_POST['status']) && !empty($_POST['t_id']) && !empty($_POST['t_percent']) && !empty($_POST['m_percent']) && ($_POST['s_percent']) && !empty($_POST['m_id'])  && !empty($_POST['s_id'])  && !empty($_POST['pcalc'])  )
 {
-  
+   
     $status = mysqli_real_escape_string($conn,$_POST['status']);
+    
     $t_id = mysqli_real_escape_string($conn,$_POST['t_id']);
-    $totalcount = mysqli_real_escape_string($conn,$_POST['total']);
+    //$totalcount = mysqli_real_escape_string($conn,$_POST['total']);
     $task_percent = mysqli_real_escape_string($conn,$_POST['t_percent']);
     $m_percent = mysqli_real_escape_string($conn,$_POST['m_percent']);
     $s_percent = mysqli_real_escape_string($conn,$_POST['s_percent']);
@@ -34,49 +24,21 @@ if(!empty($_POST['status']) && !empty($_POST['t_id']) && !empty($_POST['total'])
     $m_id = mysqli_real_escape_string($conn,$_POST['m_id']);
     $s_id = mysqli_real_escape_string($conn,$_POST['s_id']);
     $p_id = mysqli_real_escape_string($conn,$_POST['pcalc']);
-   
-
-
-    if($status == '1')
-    {
-     $count = 1;
-     $updated_response = $crud->update_task_status($t_id,$status,$conn);
-    $crud->update_percentage_of_submodule($conn,$s_id,$s_percent,$t_percent,$status);
-      $per =  round((1/$totalcount)*100,2);
-        echo $per;
-       // $data =  $crud->calculate_percentage($conn);
-        $per = round(($m_percent/100)*$per,2);
-        
-        $calculated_percent_m1 = ($m_percent+$per);     
      
-
-    $crud->update_percentage_of_module($conn,$m_id,$calculated_percent_m1);
-    $crud->update_percentage_of_project($conn,$p_id,$changes_percent_of_m1);
-    }else
-    {
-       $updated_response = $crud->update_task_status($t_id,$status,$conn);
-        
-       $per =  round((1/$totalcount)*100,2);
-        echo $per;
-       // $data =  $crud->calculate_percentage($conn);
-        $per = round(($m_percent/100)*$per,2);
-        
-        $calculated_percent_m1 = ($m_percent-$per);     
-           
-        $crud->update_percentage_of_module($conn,$m_id,$calculated_percent_m1);
-        $crud->update_percentage_of_submodule($conn,$s_id,$s_percent,$task_percent,$status);
-        $crud->update_percentage_of_project($conn,$p_id,$changes_percent_of_m1);
     
+    if($status == 0)
+    {
+        $crud->delete_task($t_id,$conn);
+        $crud->percent_calculation_after_insert_update_task($conn,$p_id,$m_id,$s_id);
+
+    }else{
+         $crud->percent_calculation($conn,$p_id,$m_id,$s_id,$t_id,$m_percent,$s_percent,$task_percent,$status);
+         $updated_response = $crud->update_task_status($t_id,$status,$conn);
     }
-     
-    echo $calculated_percent_m1;
-        
-    
-    $response = array('msg'=>$updated_response,'percentage'=>$calculated_percent_m1);
-    //header('Content-type: application/json');  
-      //echo json_encode($response);
-   
 }
+     
+    
+   
 
 
 
@@ -314,7 +276,7 @@ if(isset($_POST['p_id']))
     
     echo '<table class="table ">';
     echo  '<thead>';
-     echo  '<th>SubModule Name</th><th>Task Name</th><th>Asign To</th><th>DeadLine</th><th>Created At</th>';
+     echo  '<th>SubModule Name</th><th>Task Name</th><th>Asign To</th><th>Created At</th><th>DeadLine</th>';
        echo  '</thead>';
         echo    '<tbody>';
     for($i=1; $i<=$value; $i++)
@@ -335,16 +297,16 @@ if(!empty($_POST['project_id']) && !empty($_POST['m_id']))
     $p_id  =  $_POST['project_id'];
     $m_id = $_POST['m_id'];
     
-    
-    $total_count = $crud->get_all_task_count_by_module_and_project($p_id,$m_id,$conn);
+   $pmdata = $crud->find_all_task_by_pm($p_id,$m_id,$conn);
+
+    $assign_thead = '<th>Module Name</th><th>Task Name</th><th>Asign To</th><th>Created At</th><th>DeadLine</th><th>ACtion</th><th>Task Percent</th><th>Status</th>';
     
     $module_row = $crud->find_module_id($m_id,$conn);
     echo '<h2>'.$module_row['module_name'].'</h2>';
     echo '<table class="table" id="'.$module_row['module_name'].'">';
    echo  '<thead>';
-     echo  '<th>SubModule Name</th>';
-        echo '<th>Status</th>';
-        echo '<th>Action</th>';
+     
+    echo ($pmdata != 0) ? $assign_thead : '<th>SubModule Name</th>';
        echo  '</thead>';
    
         echo    '<tbody>';
@@ -354,7 +316,7 @@ if(!empty($_POST['project_id']) && !empty($_POST['m_id']))
             
             echo '<tr><td colspan="5" style="text-align:center;">No SubModule for this Project</td></tr>';
         
-            $pmdata = $crud->find_all_task_by_pm($p_id,$m_id,$conn);
+            
        
             if($pmdata == '0')
             {
@@ -365,13 +327,13 @@ if(!empty($_POST['project_id']) && !empty($_POST['m_id']))
                     foreach($pmdata as $key=>$value)
                     {
                     
-                        echo '<tr><form name="f1" method="post" action="project_completed.php"><td>'.$value['module_name'].'</td><td>'.$value['task_name'].'</td><td>'.$value['task_assign_to'].'</td><td>'.$value['created_at'].'</td><td>'.$value['deadline'].'</td><td><a href="add_task.php?tedit_id='.$value['t_id'].'">Edit</a></td>';
+                        echo '<tr><form name="f1" method="post" action="project_completed.php"><td>'.$value['module_name'].'</td><td>'.$value['task_name'].'</td><td>'.$value['task_assign_to'].'</td><td>'.$value['created_at'].'</td><td>'.$value['deadline'].'</td><td><a href="add_task.php?tedit_id='.$value['t_id'].'">Edit</a></td><td>'.$value['task_percent'].'</td>';
                         echo '<td>';
-                        echo '<select name="task_status" id="task_status" ><option value="1">Pending</option>';
+                        echo '<select name="task_status" id="task_status" onchange ="getvalue(this);"><option value="1">Pending</option>';
                         echo '<option value="2"', ($value['status'] == '2') ? 'selected':'' ,'>Approved</option>';
                         echo '</select>
-                        </td><td><input type="submit" value="change status" onclick="project_completed('.$value['t_id'].','.$total_count.','.$value['percentage'].','.$value['module_id'].'
-                    ,'.$value['p_id'].')"></td></form></tr>';
+                        </td><td><input type="submit" value="change status" onclick="project_completed('.$value['t_id'].','.$value['task_percent'].','.$value['module_percent'].','.$value['submodule_percent'].','.$value['module_id'].'
+                    ,'.$value['sub_mod_id'].','.$value['p_id'].','.$value['status'].')"></td></form></tr>';
                     }
                 }
     }
@@ -396,20 +358,14 @@ if(!empty($_POST['project_id']) && !empty($_POST['m_id'] && !empty($_POST['sub_m
     $m_id = $_POST['m_id'];
     $sub_mod_id = $_POST['sub_mod_id'];
     
-    
-  
-    
-    $total_count = $crud->get_all_task_count_by_module_and_project($p_id,$m_id,$conn);
-    
-   
    
     
      $data = $crud->find_all_task_by_pms($p_id,$m_id,$sub_mod_id,$conn);
-
+    
     
      echo '<table class="table">';
    echo  '<thead>';
-     echo  '<th>SubModule Name</th><th>Task Name</th><th>Asign To</th><th>DeadLine</th><th>Created At</th><th>ACtion</th><th>Status</th>';
+     echo  '<th>SubModule Name</th><th>Task Name</th><th>Asign To</th><th>Created At</th><th>DeadLine</th><th>ACtion</th><th>Task Percent</th><th>Status</th>';
        echo  '</thead>';
    
         echo    '<tbody>';
@@ -422,14 +378,16 @@ if(!empty($_POST['project_id']) && !empty($_POST['m_id'] && !empty($_POST['sub_m
             $selected = 'selected="selected"';
                 foreach($data as $key=>$value)
                 {
-                    echo '<tr><form name="f1" method="post" action="project_completed.php"><td>'.$value['submodule_name'].'</td><td>'.$value['task_name'].'</td><td>'.$value['task_assign_to'].'</td><td>'.$value['created_at'].'</td><td>'.$value['deadline'].'</td><td><a href="add_task.php?tedit_id='.$value['t_id'].'">Edit</a></td>
+                    echo '<tr><form name="f1" method="post" action="project_completed.php"><td>'.$value['submodule_name'].'</td><td>'.$value['task_name'].'</td><td>'.$value['task_assign_to'].'</td><td>'.$value['created_at'].'</td><td>'.$value['deadline'].'</td><td><a href="add_task.php?tedit_id='.$value['t_id'].'">Edit</a></td><td>'.$value['task_percent'].'</td>
                     <td>';
-                    echo '<select name="task_status" id="task_status" ><option value="1">Pending</option>';
+                    echo '<select name="task_status" id="task_status" onchange ="getvalue(this);"><option value="1">Pending</option>';
                     echo '<option value="2"', ($value['status'] == '2') ? 'selected':'' ,'>Approved</option>';
                     echo '</select>
-                    <input type="submit" value="change status" name="send_status" onclick="project_completed('.$value['t_id'].','.$total_count.','.$value['task_percent'].','.$value['percentage'].','.$value['submodule_percent'].','.$value['module_id'].'
-                    ,'.$value['sub_mod_id'].','.$value['p_id'].')">
+                    <input type="submit" value="change status" name="send_status" onclick="project_completed('.$value['t_id'].','.$value['task_percent'].','.$value['module_percent'].','.$value['submodule_percent'].','.$value['module_id'].'
+                    ,'.$value['sub_mod_id'].','.$value['p_id'].','.$value['status'].')">
                     </td>';
+                    echo '<td><input type="submit" value="Delete task" onclick="project_completed('.$value['t_id'].','.$value['task_percent'].','.$value['module_percent'].','.$value['submodule_percent'].','.$value['module_id'].'
+                    ,'.$value['sub_mod_id'].','.$value['p_id'].',0)"></td>';
                     echo '</form>
                     </tr>';
                 }

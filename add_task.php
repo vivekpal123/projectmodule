@@ -39,13 +39,14 @@ $project_manager = $crud->get_project_manager($conn); // to display in dropdown
             {     
 
 
+                 
                   $sum_percent = $crud->getpm_taskpercent_sum($conn,$project_name,$module_name,$id); 
                     $totalpercent = $taskpercent+$sum_percent;
                 
                   if($totalpercent <=  (int)100.00)
                   {
                       $crud->update_task($data,$conn,$id);  
-                      $crud->update_submodule_percent($conn,$submodule_name,$totalpercent);
+                    //  $crud->update_submodule_percent($conn,$submodule_name,$totalpercent);
                   }else
                     {
                       $error[] = "please assign percent less than current assign";
@@ -62,7 +63,7 @@ $project_manager = $crud->get_project_manager($conn); // to display in dropdown
                   if($totalpercent <=  (int)100.00)
                   {
                      $crud->update_task($data,$conn,$id);  
-                     $crud->update_submodule_percent($conn,$submodule_name,$totalpercent);
+                     //$crud->update_submodule_percent($conn,$submodule_name,$totalpercent);
 
                   }else
                     {
@@ -84,7 +85,7 @@ $project_manager = $crud->get_project_manager($conn); // to display in dropdown
                   if($totalpercent <=  100.00)
                   {
                       $crud->insert_task($data,$conn);
-                      $crud->update_submodule_percent($conn,$submodule_name,$totalpercent);
+                 //     $crud->update_submodule_percent($conn,$submodule_name,$totalpercent);
 
                   }else
                     $error[] = "You can not add task ";
@@ -96,7 +97,7 @@ $project_manager = $crud->get_project_manager($conn); // to display in dropdown
                   if($totalpercent <=  100.00)
                   {
                       $crud->insert_task($data,$conn);
-                      $crud->update_submodule_percent($conn,$submodule_name,$totalpercent);
+                    //  $crud->update_submodule_percent($conn,$submodule_name,$totalpercent);
                   }else
                     $error[] = "You can not add task ";
               
@@ -228,7 +229,7 @@ if(isset($_GET['tedit_id']))
                             <label for="name">Select Sub Module </label>
                      <a  href="#" id="add_s_m" class="btn btn-info btn-md" data-toggle="modal" data-target="#submodule_modal">Add New SubModule</a>
 
-                             <select class="form-control" name="submodule" id="submodule">
+                             <select class="form-control submodule" name="submodule" id="submodule">
                                 <option value="0">select</option>
                                 <?php if(isset($t_id)) {   foreach($submodule_data as $key=> $value) { ?>
                                  <option value="<?php echo $value['submodule_id']?>" <?php echo (@$s_m_id == $value['submodule_id']) ? 'selected="selected"' : " " ?>><?php echo $value['submodule_name'];?></option>
@@ -271,16 +272,16 @@ if(isset($_GET['tedit_id']))
                             <label for="taskpercent">Task Percent :</label>
                               <select class="form-control" name="taskpercent" id="taskpercent">
                                 <option value="0">select</option>
-                                 <option value="10" <?php echo ($taskpercent == "10.00") ? 'selected="selected"' : " " ?>>10</option>
-                                 <option value="20"  <?php echo ($taskpercent == "20.00") ? 'selected="selected"' : " " ?>>20</option>
-                                 <option value="30"  <?php echo ($taskpercent == "30.00") ? 'selected="selected"' : " " ?>>30</option>
-                                 <option value="40"  <?php echo ($taskpercent == "40.00") ? 'selected="selected"' : " "?>>40</option>
-                                <option value="50"  <?php echo ($taskpercent == "50.00") ? 'selected="selected"' : " "?>>50</option>
-                                 <option value="60"  <?php echo ($taskpercent == "60.00") ? 'selected="selected"' : " " ?>>60</option>
-                                <option value="70"  <?php echo ($taskpercent == "70.00") ? 'selected="selected"'  : " "?>>70</option>
-                                 <option value="80"  <?php echo ($taskpercent == "80.00") ? 'selected="selected"' : " " ?>>80</option>
-                                  <option value="90"  <?php echo ($taskpercent == "90.00") ? 'selected="selected"' : " " ?>>90</option>
-                                 <option value="100"  <?php echo ($taskpercent == "100.00") ? 'selected="selected"' : " " ?>>100</option>
+                                 <option value="10" <?php echo (@$taskpercent == "10.00") ? 'selected="selected"' : " " ?>>10</option>
+                                 <option value="20"  <?php echo (@$taskpercent == "20.00") ? 'selected="selected"' : " " ?>>20</option>
+                                 <option value="30"  <?php echo (@$taskpercent == "30.00") ? 'selected="selected"' : " " ?>>30</option>
+                                 <option value="40"  <?php echo (@$taskpercent == "40.00") ? 'selected="selected"' : " "?>>40</option>
+                                <option value="50"  <?php echo (@$taskpercent == "50.00") ? 'selected="selected"' : " "?>>50</option>
+                                 <option value="60"  <?php echo (@$taskpercent == "60.00") ? 'selected="selected"' : " " ?>>60</option>
+                                <option value="70"  <?php echo (@$taskpercent == "70.00") ? 'selected="selected"'  : " "?>>70</option>
+                                 <option value="80"  <?php echo (@$taskpercent == "80.00") ? 'selected="selected"' : " " ?>>80</option>
+                                  <option value="90"  <?php echo (@$taskpercent == "90.00") ? 'selected="selected"' : " " ?>>90</option>
+                                 <option value="100"  <?php echo (@$taskpercent == "100.00") ? 'selected="selected"' : " " ?>>100</option>
 
                             </select>  
                             
@@ -319,8 +320,8 @@ if(isset($_GET['tedit_id']))
         
      $('#mpname option[value='+pid+']').attr("selected", "selected");  
      $('#module_name option[value='+mid+']').attr("selected", "selected"); 
-      /*  
-    $("#taskpercent").on("change",function(){
+      
+    /*$("#taskpercent").on("change",function(){
  
 
        
@@ -339,9 +340,9 @@ if(isset($_GET['tedit_id']))
             error: function(jqXHR, status, error) {
                 console.log(status + ": " + error);
             }
-        });*/
+        });
 
-    })
+    })*/
       
         
     <?php  } ?>
@@ -671,15 +672,15 @@ if(isset($_GET['tedit_id']))
                     type: 'POST',        
                     url: 'ajax_function.php',
                     data: 'module_id='+select_id,    
-                    datatype: "json",
+                   // datatype: "json",
                     success: function (data) {
-                        
+                        alert(data);
                         if(data == 0)
                         {
                                      
                         }else{
                             
-                             $('#submodule').html(data);
+                             $('.submodule').html(data);
                         }
                        
                     
@@ -696,7 +697,7 @@ if(isset($_GET['tedit_id']))
                     type: 'POST',        
                     url: 'ajax_function.php',
                     data: 'module_id='+id,    
-                    datatype: "json",
+                    //datatype: "json",
                     success: function (data) {
                         
                         if(data == 0)
@@ -707,7 +708,7 @@ if(isset($_GET['tedit_id']))
                                      
                         }else{
                             
-                             $('#submodule').html(data);
+                             $('.submodule').html(data);
                              $('#module_name option[value='+id+']').attr("selected", "selected");  //make option selected inside modal after selecting form modulename
                             
                         }

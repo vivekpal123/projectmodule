@@ -30,7 +30,7 @@ function isuniqe($em,$conn)
     
         
         $crud = new Crud();
-        $crud->insert($data,$conn);
+        $crud->insert_user($data,$conn);
          
     }
 
@@ -94,7 +94,7 @@ function isuniqe($em,$conn)
                             <select class="form-control" name="status" id="status">
                                 <option value="0">select</option>
                                 <option value="1">Active</option>
-                                <option value="0">InActive</option>
+                                <option value="2">InActive</option>
 
                             </select>
                         </div>

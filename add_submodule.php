@@ -3,46 +3,40 @@ include('config.php');
 include('crud.php');
 $crud = new Crud();
 $module_data = $crud->get_module_list($conn);
-
+$error = array();
     if(isset($_POST['save']))
     {
       
         $module_name = mysqli_real_escape_string($conn,$_POST['module_name']);
         $sub_module_name = mysqli_real_escape_string($conn,$_POST['submodule']);
-        $subpercent =  mysqli_real_escape_string($conn,$_POST['subpercent']);
+        $submpercent = mysqli_real_escape_string($conn,$_POST['submpercent']);
 
-        $data = array('module_id'=>$module_name,'submodule'=>$sub_module_name,'submodule_percent'=>$subpercent);
+        $data = array('module_id'=>$module_name,'submodule'=>$sub_module_name,'submpercent'=>$submpercent);
     
         if(isset($_GET['smedit_id']))
-        {    
+        {   
             $id = mysqli_real_escape_string($conn,$_GET['smedit_id']);
-            
-            $sum_percent =  $crud->getsub_percent($conn,$module_name,$id); 
-            $totalpercent = $subpercent+$sum_percent; 
-            if($totalpercent <=  100.00)
-                {
-                   $crud->update_sub_module($data,$conn,$id);   
-                   //$crud->update_submodule_percent($conn,$id,$totalpercent);
+
+            $sum_percent  = $crud->get_submodulepercent_sum($conn,$module_name,$id);
+            $totalpercent = $submpercent+$sum_percent;
+                if($totalpercent <=  100.00)
+                  {
+                    $crud->update_sub_module($data,$conn,$id);    
                 }else
-                {
-                    $error[] = "please assign percent less than current assign";
-                } 
+                $error[] = "You can not add Percent more than current Percent";
          
         }else
         {
-
-            $sum_percent =  $crud->getsub_percent($conn,$module_name,0); 
-            $totalpercent = $subpercent+$sum_percent;
-            if($totalpercent <=  100.00)
+        $sum_percent  = $crud->get_submodulepercent_sum($conn,$module_name,0);
+            $totalpercent = $submpercent+$sum_percent;
+            echo $totalpercent;
+                if($totalpercent <=  100.00)
                   {
-                      $crud->insert_sub_module($data,$conn);
-                      $last_s_id = $crud->subm_count();
-
-                      $crud->update_submodule_percent($conn,$last_s_id,$totalpercent);
-
+                      $crud->insert_sub_module($data,$conn);        
+                    //  $crud->update_submodule_percent($conn,$submodule_name,$totalpercent);
                   }else
-                    $error[] = "You can not add task ";
-           
+                    $error[] = "You can not add subtask";
+            
         }
        
          
@@ -56,7 +50,7 @@ $module_data = $crud->get_module_list($conn);
                     
         $module_id = $result['module_id'];
         $sub_module_name = $result['sub_module_name'];
-        
+        $submpercent = $result['submodule_percent'];
         
     }
 
@@ -99,7 +93,7 @@ $module_data = $crud->get_module_list($conn);
                 <div class="row">
                     <?php echo (isset($sm_id)) ? "<h2>Update Project Detail</h2>":"<h2>Add SubModule</h2>" ?>
                     <div class="col-lg-12">
-                     <?php if(count(@$error) > 0) {  if(isset($sm_id)) { ?>
+                    <?php if(count($error) > 0) {  if(isset($sm_id)) { ?>
                         <div class="alert alert-danger">
                          <strong>Error!</strong><?php echo $error[0]; ?>.</div> 
                          <?php } else { ?>
@@ -120,12 +114,37 @@ $module_data = $crud->get_module_list($conn);
                             <label for="name">Sub Module Name:</label>
                             <input type="text" name="submodule" id="submodule" class="form-control" value="<?php echo @$sub_module_name; ?>">
                         </div>
-                       
-                    
                         <div class="form-group">
-                            <label for="name">Assign Percentage:</label><span id="remain"></span>
-                            <input type="text" min="1" name="subpercent" id="subpercent" class="form-control" value="">
+                            <label for="submpercent">Task Percent :</label>
+                              <select class="form-control" name="submpercent" id="submpercent">
+                                <option value="0">select</option>
+                                 <option value="10" <?php echo (@$submpercent == "10.00") ? 'selected="selected"' : " " ?>>10</option>
+                                 <option value="20"  <?php echo (@$submpercent == "20.00") ? 'selected="selected"' : " " ?>>20</option>
+                                 <option value="30"  <?php echo (@$submpercent == "30.00") ? 'selected="selected"' : " " ?>>30</option>
+                                 <option value="40"  <?php echo (@$submpercent == "40.00") ? 'selected="selected"' : " "?>>40</option>
+                                <option value="50"  <?php echo (@$submpercent == "50.00") ? 'selected="selected"' : " "?>>50</option>
+                                 <option value="60"  <?php echo (@$submpercent == "60.00") ? 'selected="selected"' : " " ?>>60</option>
+                                <option value="70"  <?php echo (@$submpercent == "70.00") ? 'selected="selected"'  : " "?>>70</option>
+                                 <option value="80"  <?php echo (@$submpercent == "80.00") ? 'selected="selected"' : " " ?>>80</option>
+                                  <option value="90"  <?php echo (@$submpercent == "90.00") ? 'selected="selected"' : " " ?>>90</option>
+                                 <option value="100"  <?php echo (@$submpercent == "100.00") ? 'selected="selected"' : " " ?>>100</option>
+
+                            </select>  
+                            
+                           
                         </div>
+
+                       
+                       <!-- <div class="form-group">
+                            <label>Sub Module:</label>
+                            <label class="radio-inline">
+                                <input type="radio" name="optradio"> YES
+                            </label>
+                            <label class="radio-inline">
+                              <input type="radio" name="optradio">NO
+                            </label>
+                        </div>-->
+                        
 
                         <input type ="hidden" name="save" value="0">
                         <input type="submit" name="send" class="form-control btn btn-primary" onclick="return sub_module_validation()">

@@ -37,30 +37,25 @@ include('crud.php');
             <div class="container-fluid">
                 <div class="row">
                   
-                <div class="col-lg-2">
+                <div class="col-md-2">
                   
                     <?php   $data = $crud->get_all_project($conn);
                     foreach($data as $key => $value) { ?>
     
-                    <p><?php echo $value['p_name'];?></p>
-                <div id="test-circle<?php echo $value['p_id']; ?>" data-toggle="collapse" data-target="#demo" data-percent="<?php echo $value['percent']; ?>"></div>
-                <?php  $module_data =   $crud->find_module_by_pid($value['p_id'],$conn);  ?>
+                    <p><a href="#" data-toggle="collapse" data-target="#demo<?php echo $value['p_id']; ?>"><?php echo $value['p_name'];?></a></p>
+                <div id="test-circle<?php echo $value['p_id']; ?>"  data-percent="<?php echo $value['percent']; ?>"></div>
+                <?php  $module_data =   $crud->find_module_by_pid($value['p_id'],$conn); ?>
                     
-                       <div id="demo" class="collapse">
-                            
-                        <?php   foreach($module_data as $mkey => $mvalue) { 
-                           
-                                $percent = $mvalue['percent_const']-$mvalue['percent'];
-                           ?>
-                            
-                            <div id="module-circle<?php echo $mvalue['module_id']?>" data-percent="<?php echo @$percent; ?>">
-                                       
-                            </div>
-                        <?php } ?>  
-                           
+                       <div id="demo<?php echo $value['p_id']; ?>" >
+                            <?php if(is_array($module_data)) {  foreach($module_data as $mkey => $mvalue) {?>
+                                <div id="module-circle<?php echo $mvalue['module_id']; ?>" data-percent="<?php echo $mvalue['percent_completed'];?>"></div>
+                             <?php } } ?>   
                         </div>
                 <?php } ?>
+
+                     
                 </div>
+               
                 </div>
             </div>
         </div>
@@ -74,7 +69,7 @@ include('crud.php');
     <script src="js/jquery.circliful.min.js"></script>
     
     <script>
-        $( document ).ready(function() {
+        $(document).ready(function() {
       <?php  foreach($data as $key => $value) {   ?>    
         $("#test-circle<?php echo $value['p_id']; ?>").circliful({
         animationStep: 5,
@@ -83,7 +78,17 @@ include('crud.php');
         backgroundBorderWidth: 15,
        targetPercent: 100,
     });
-    <?php } ?>
+<?php  $module_data =   $crud->find_module_by_pid($value['p_id'],$conn); if(is_array($module_data)) {
+foreach ($module_data as $mmkey => $mmvalue) { ?>
+   $("#module-circle<?php echo $mmvalue['module_id']; ?>").circliful({
+        animationStep: 5,
+        textColor:  '#00FF00',
+        foregroundBorderWidth: 5,
+        backgroundBorderWidth: 15,
+       targetPercent: <?php echo $mmvalue['percent']; ?>,
+    });
+       
+    <?php  } }} ?>
             
     });
         

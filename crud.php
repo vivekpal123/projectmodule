@@ -11,7 +11,7 @@ class Crud
     
     public function insert_module($data,$conn)
     {
-         $sql = "insert into module(p_id,module_name,percent_remain_to_complete) values('".$data['pname']."','".$data['mname']."','".$data['module_percent']."')";
+         $sql = "insert into module(p_id,module_name,module_percent) values('".$data['pname']."','".$data['mname']."','".$data['mpercent']."')";
         
         if(mysqli_query($conn,$sql))
         {
@@ -23,7 +23,7 @@ class Crud
     
     public function insert_sub_module($data,$conn)
     {
-         $sql = "insert into sub_module(module_id,sub_module_name,submodule_percent) values('".$data['module_id']."','".$data['submodule']."','".$data['submodule_percent']."')";
+         $sql = "insert into sub_module(module_id,sub_module_name,submodule_percent) values('".$data['module_id']."','".$data['submodule']."','".$data['submpercent']."')";
         
         if(mysqli_query($conn,$sql))
         {
@@ -46,7 +46,93 @@ class Crud
         }else
             echo "Error".mysqli_error($conn);
         
+      $this->percent_calculation_after_insert_update_task($conn,$data['pname'],$data['module_name'],$data['submodule']);
     }
+
+    public function delete_task($t_id,$conn)
+    {
+
+        $sql = "DELETE FROM task where t_id={$t_id}";
+
+        if(mysqli_query($conn,$sql))
+        {
+            echo '<div class="alert alert-success">
+            <strong>Success!</strong>Deleted succefully.</div>';
+        }else
+        echo "Erro".mysqli_error($conn);
+    }
+    
+    public function percent_calculation_after_insert_update_task($conn,$p_id,$m_id,$s_id)
+    {
+
+         $data = $this->find_all_task_by_pms($p_id,$m_id,$s_id,$conn);
+         
+        if($data == '0')
+        {   
+                // if no task present
+        }else{    
+             $total_taskpercent =   $this->find_pms_task_totalpercent($conn,$p_id,$m_id,$s_id); 
+             //echo $total_taskpercent;
+              $count = 0;
+              $last_completed_percent = 0.00;
+             foreach ($data as $key => $value) {
+                 
+                
+                    if($value['status'] == 2){  
+
+                
+
+
+                             $t_percent = $last_completed_percent+$value['task_percent'];
+
+                            $last_completed_percent =  $value['task_percent'];
+
+                             $task_percent =  number_format(($t_percent/$total_taskpercent)*100,2);
+                 
+                             $submod_current_percent = ($value['submodule_percent']*($task_percent/100));
+                             //echo "sub_curr1".$submod_current_percent;
+           
+            
+                    $submod_total_com_percent = ($submod_current_percent+$this->find_pm_submodule_completed_percent($conn,$m_id,$s_id,$value['status']));
+                
+             
+                
+             
+                      
+                        $this->update_submodule_percent($conn,$s_id,$submod_current_percent);
+
+
+                      $module_current_percent =  ($value['module_percent']*($submod_total_com_percent/100)); 
+
+                      
+                      $module_total_com_percent = ($module_current_percent + $this->find_pm_module_completed_percent($conn,$p_id,$m_id,$value['status'])); 
+                       
+         
+          
+         
+           // $previous_modpercent  =   $this->find_pm_module_current_percent($conn,$p_id,$m_id,$status);
+            
+           
+
+                     $this->update_module_percent($conn,$m_id,$module_current_percent);
+
+                    $project_percent_completed = $module_total_com_percent;
+
+
+                     $this->update_percentage_of_project($conn,$p_id,$project_percent_completed);
+
+                    $count++;
+                    }
+                }
+     
+
+     
+              echo "count".$count;
+    
+        }
+    
+    }
+
     
     
     public function insert_user($data,$conn)
@@ -95,17 +181,25 @@ class Crud
         
     }
     
-    public function update_module($data,$conn,$id)
+    public function update_module($data,$conn,$mid)
     {
         
-         $sql = "update module set p_id ='".$data['pname']."',module_name = '".$data['mname']."',percent_remain_to_complete  = '".$data['module_percent']."' where module_id='".$id."' ";
+         $sql = "update module set p_id ='".$data['pname']."',module_name = '".$data['mname']."', module_percent = '".$data['mpercent']."' where module_id='".$mid."' ";
         if(mysqli_query($conn,$sql))
         {
             echo '<div class="alert alert-success">
             <strong>Success!</strong>Updated succefully.</div>';
         }else
             echo "Error".mysqli_error($conn);
+       
+        $submoduledata =  $this->find_submodule_by_mid($mid,$conn);
+
+        foreach ($submoduledata as $key => $value) {
             
+
+            $this->percent_calculation_after_insert_update_task($conn,$data['pname'],$mid,$value['submodule_id']);
+        }
+
     }
     public function update_task($data,$conn,$id)
     {
@@ -122,12 +216,15 @@ class Crud
             <strong>Success!</strong>Updated succefully.</div>';
         }else
             echo "Error".mysqli_error($conn);
+
+
+         $this->percent_calculation_after_insert_update_task($conn,$data['pname'],$data['module_name'],$data['submodule']);   
     }
     
 
-    public function update_task_percent($conn,$t_id,$task_percent,$t_sid)
+    public function update_module_percent($conn,$m_id,$m_per)
     {
-        $sql = "update task set  task_percent ='".$task_percent."' where t_id = {$t_id} ";
+        $sql = "update module set  module_percent_completed ='".$m_per."' where module_id = {$m_id} ";
 
         if(mysqli_query($conn,$sql))
         {
@@ -139,8 +236,9 @@ class Crud
     }
     public function update_submodule_percent($conn,$sub_mod_id,$percent)
     {
-
-        $sql = "update sub_module set submodule_percent = {$percent} where sub_mod_id = {$sub_mod_id}";
+       // echo "sub_perc".$percent;
+        $sql = "update sub_module set submodule_com_percent = {$percent} where sub_mod_id = {$sub_mod_id}";
+       // echo $sql;
 
         if(mysqli_query($conn,$sql))
         {
@@ -151,35 +249,23 @@ class Crud
 
     }
 
-    public function update_module_percent($conn,$module_id,$percent)
+    public function update_percentage($conn,$p_id,$project_completed)
     {
-        $sql = "update module set percent_remain_to_complete = {$percent} where module_id = {$module_id}";
+
+        $sql = "update project_details set percent_completed = {$project_completed} where p_id = {$p_id}";
 
         if(mysqli_query($conn,$sql))
         {
-            return '1';
-        }else
-            echo 'Error'.mysqli_error($conn);
-    }
 
-      public function update_remove_task_percent($conn,$t_id,$task_percent)
-    {
-        
-        $sql = "update task set  task_percent ='".$task_percent."' where t_id = {$t_id}";
-
-        if(mysqli_query($conn,$sql))
-        {
-           return 1;
         }else
         echo "Error".mysqli_error($conn);
-
-
     }
 
+     
 
-    public function update_sub_module($data,$conn,$id){
+    public function update_sub_module($data,$conn,$sid){
             
-         $sql = "update sub_module set module_id ='".$data['module_id']."',sub_module_name = '".$data['submodule']."',submodule_percent = '".$data['submodule_percent']."' where sub_mod_id='".$id."' ";
+         $sql = "update sub_module set module_id ='".$data['module_id']."',sub_module_name = '".$data['submodule']."',submodule_percent = '".$data['submpercent']."' where sub_mod_id='".$sid."' ";
        
         if(mysqli_query($conn,$sql))
         {
@@ -188,6 +274,11 @@ class Crud
             <strong>Success!</strong>Updated succefully.</div>';
         }else
             echo "Error".mysqli_error($conn);
+
+           $module = $this->find_module_id($data['module_id'],$conn);
+
+           $this->percent_calculation_after_insert_update_task($conn,$module['p_id'],$data['module_id'],$sid);
+
     }
     
     public function get_module_list($conn)
@@ -402,7 +493,30 @@ class Crud
              } 
             
      
-      
+      /*  foreach($data as $key=> $value)
+        {
+                 $i=0;
+            for($y = 0 ; $y< count($dt); $y++){
+                
+                if($value['p_id'] == $dt[$y]['p_id']){
+                    $i++;
+                    
+                    $project_wise[$value['p_id']][$i]['p_id'] = $dt[$y]['p_id'];
+                    $project_wise[$value['p_id']][$i]['pname'] = $dt[$y]['pname'];
+                    $project_wise[$value['p_id']][$i]['module_id'] = $dt[$y]['module_id'];
+                    $project_wise[$value['p_id']][$i]['sub_mod_id'] = $dt[$y]['sub_mod_id'];
+                    $project_wise[$value['p_id']][$i]['task_name'] = $dt[$y]['task_name'];
+                        
+                 /*  echo "PID:".$dt[$y]['p_id']."<br>";
+                    echo "PNAME:".$dt[$y]['pname']."<br>";
+                    echo "MID:".$dt[$y]['module_id']."<br>";
+                    echo "SMID:".$dt[$y]['sub_mod_id']."<br>";
+                    echo "TNAME:".$dt[$y]['task_name']."<br>";*/
+           //     }
+          
+            // }
+              
+       // }
         return $project_wise;
       
     
@@ -466,8 +580,9 @@ class Crud
             {
                 $data[$i]['module_id'] = $row['module_id'];
                 $data[$i]['module_name'] = $row['module_name'];
-                $data[$i]['percent'] = $row['percent_remain_to_complete'];
-                $data[$i]['percent_const'] = $row['percent_need_to_completed'];
+                $data[$i]['percent'] = $row['module_percent'];
+                $data[$i]['percent_completed']  =   $row['module_percent_completed'];
+                
                 
                 $i++;
             }
@@ -513,6 +628,7 @@ class Crud
             {
             $dt[$i]['p_id'] = $row['p_id'];
             $dt[$i]['t_id'] = $row['t_id'];
+            $dt[$i]['task_percent'] = $row['task_percent'];
             $project_name = $this->find_project_detail_id($dt[$i]['p_id'],$conn);
             $dt[$i]['pname'] = $project_name['pname'];
             
@@ -521,8 +637,9 @@ class Crud
             $dt[$i]['module_name'] = $module_data['module_name'];
             $submodule_data = $this->find_submodule_id($row['submodule_id'],$conn);
           //  $dt[$i]['submodule_name'] =  $submodule_data['sub_module_name'];
+            $dt[$i]['sub_mod_id'] = $row['submodule_id'];
             $dt[$i]['submodule_percent'] =   $submodule_data['submodule_percent'];  
-            $dt[$i]['percentage'] = $module_data['percent_remain_to_complete'];    
+            $dt[$i]['module_percent'] = $module_data['module_percent'];    
             $dt[$i]['status'] = $row['status'];    
             $dt[$i]['task_name'] = $row['task_name'];
             $user  = $this->find_userdetail_id($row['task_assign_to'],$conn);
@@ -563,7 +680,7 @@ class Crud
             $dt[$i]['module_id'] = $row['module_id'];
             $module_data = $this->find_module_id($row['module_id'],$conn);
             $dt[$i]['module_name'] = $module_data['module_name'];
-            $dt[$i]['percentage'] = $module_data['percent_remain_to_complete'];    
+            $dt[$i]['module_percent'] = $module_data['module_percent'];    
             $dt[$i]['status'] = $row['status'];    
           
             $dt[$i]['sub_mod_id'] = $row['submodule_id'];
@@ -710,8 +827,8 @@ class Crud
     public function update_task_status($t_id,$status,$conn)
     {
          
-        $sql = "update task set status=".$status.",  where t_id = {$t_id}";
-    
+        $sql = "update task set status=".$status."   where t_id = {$t_id}";
+        
             if(mysqli_query($conn,$sql))
             {
             return '<div class="alert alert-success">
@@ -742,28 +859,13 @@ class Crud
     }
     
     
-    public function get_all_task_count_by_module_and_project($p_id,$m_id,$conn)
-    {
-        $sql = "select COUNT(*) as total from task where module_id={$m_id} AND p_id={$p_id} AND STATUS=1";
-        
-        $result = mysqli_query($conn,$sql);
-        
-        if(mysqli_num_rows($result) > 0)
-        {
-            $row = mysqli_fetch_array($result);
-            
-            return $row['total'];
-        }
-        return 0;
-        
-    }
     
     
     public function update_percentage_of_module($conn,$m_id,$changes_percent_of_m1)
     {
         
         
-        $sql = "update module set percent_remain_to_complete='".$changes_percent_of_m1."' where module_id={$m_id}";
+        $sql = "update module set module_percent_completed='".$changes_percent_of_m1."' where module_id={$m_id}";
         
         $result = mysqli_query($conn,$sql);
         
@@ -774,47 +876,75 @@ class Crud
         
     }
 
-    public function update_percentage_of_submodule($conn,$s_id,$s_percent,$t_percent,$status)
+    public function update_percentage_of_submodule($conn,$s_id,$s_percent)
     {
-        if($status == '1')
+        
+        $sql = "update sub_module set submodule_com_per='".$s_percent."' where sub_mod_id={$s_id}";
+        
+        $result = mysqli_query($conn,$sql);
+        
+            if($result)
+            {
+                echo "updated succefully";
+            }
+
+    }
+
+    
+    public function update_percentage_of_project($conn,$p_id,$project_percent_completed)
+    {
+         
+        $sql = "update project_details set percent_completed='".$project_percent_completed."' where p_id={$p_id}";
+        
+        $result = mysqli_query($conn,$sql);
+        
+            if($result)
+            {
+                echo "updated succefully";
+            }
+    }
+    
+
+    public function get_submodulepercent_sum($conn,$m_id,$s_id)
+    {
+
+        if($s_id == 0)
         {
-              $calculation = $s_percent+$t_percent;
+             $sql = "SELECT SUM(`submodule_percent`) as submodule_percent FROM `sub_module` WHERE `module_id` = {$m_id}";
+         }else
+         {
+         $sql = "SELECT SUM(`submodule_percent`) as submodule_percent FROM `sub_module` WHERE `module_id` = {$m_id} AND  sub_mod_id != {$s_id}";
+         }
+
+
+        $result = mysqli_query($conn,$sql);
+
+        if(mysqli_num_rows($result) > 0)
+        {
+            $row = mysqli_fetch_array($result);
+            return  $row['submodule_percent'];
         }else
-        $calculation = $s_percent-$t_percent;
-        
-        $sql = "update sub_module set submodule_remaining_per='".$calculation."' where sub_mod_id={$s_id}";
-        
-        $result = mysqli_query($conn,$sql);
-        
-            if($result)
-            {
-                echo "updated succefully";
-            }
+        return 0.00;
+
 
     }
 
-    
-    public function update_percentage_of_project($conn,$p_id,$changes_percent_of_m1)
+    public function get_modulepercent_sum($conn,$p_id,$m_id)
     {
-            $data = $this->find_module_by_pid($p_id,$conn);
-                $remaining_percent = 0.00;
-                $percent_completed = 100.00;
-                foreach($data as $key=>$value)
-                {
-                    $remaining_percent = $remaining_percent+$value['percent'];
-                }
+        $sql = ($m_id == 0) ? "SELECT SUM(`module_percent`) as module_percent FROM `module` WHERE `p_id` = {$p_id}" : 
+            "SELECT SUM(`module_percent`) as module_percent FROM `module` WHERE `p_id` = {$p_id} AND module_id != {$m_id}";
         
-        $percent_completed = $percent_completed-$remaining_percent;
-        $sql = "update project_details set percent_completed='".$percent_completed."' where p_id={$p_id}";
-        
+
         $result = mysqli_query($conn,$sql);
-        
-            if($result)
-            {
-                echo "updated succefully";
-            }
+
+        if(mysqli_num_rows($result) > 0)
+        {
+            $row = mysqli_fetch_array($result);
+            return  $row['module_percent'];
+        }else
+        return 0.00;
+
     }
-    
     
     public function getpm_taskpercent_sum($conn,$p_id,$m_id,$t_id)
     {
@@ -827,7 +957,7 @@ class Crud
            else  // FOR UPDATION
            {
             $sql = "SELECT SUM(`task_percent`) as taskpercent FROM `task` WHERE p_id = {$p_id} AND `module_id` ={$m_id} AND `t_id` != {$t_id}";
-            echo $sql;exit;
+            echo $sql;
            }
             
            $result  =  mysqli_query($conn,$sql);
@@ -844,48 +974,7 @@ class Crud
 
     }
 
-    public function getsub_percent($conn,$m_id,$s_id)
-    {
 
-        if($s_id == 0)
-        {
-            $sql= "SELECT SUM(`submodule_percent`) as submodule_percent FROM `sub_module` WHERE module_id = {$m_id} ";
-        }else
-        {
-            $sql = "SELECT SUM(`submodule_percent`) as submodule_percent FROM `sub_module` WHERE module_id = {$m_id} AND sub_mod_id != {$s_id}";       
-        }
-        $result  =  mysqli_query($conn,$sql);
-            if(mysqli_num_rows($result) > 0)
-            {
-                $row = mysqli_fetch_array($result);
-
-                return  $row['submodule_percent'];
-            }else
-                 return 0.00;
-
-
-    }
-
-    public  function getmodule_percent($conn,$p_id,$m_id)
-    {
-        if($m_id == 0)
-        {
-         $sql= "SELECT SUM(`percent_remain_to_complete`) as module_percent FROM `module` WHERE p_id = {$p_id} ";
-        }else
-        {
-            $sql = "SELECT SUM(`percent_remain_to_complete`) as module_percent FROM `module` WHERE p_id = {$p_id} AND module_id != {$m_id}";       
-        }
-         $result  =  mysqli_query($conn,$sql);
-            if(mysqli_num_rows($result) > 0)
-            {
-                $row = mysqli_fetch_array($result);
-
-                return  $row['module_percent'];
-            }else
-                 return 0.00;
-
-        
-    }
     public function getpms_taskpercent_sum($conn,$p_id,$m_id,$s_id,$t_id)
     {
             
@@ -912,33 +1001,276 @@ class Crud
            
     }
 
+
+
+    public function find_pms_task_totalpercent($conn,$p_id,$m_id,$s_id)
+
+    {
+
+        $sql= "SELECT SUM(`task_percent`) as taskpercent FROM `task` WHERE p_id = {$p_id} AND `module_id` ={$m_id} AND `submodule_id` = {$s_id} ";
+
+                 $result  =  mysqli_query($conn,$sql);
+            if(mysqli_num_rows($result) > 0)
+            {
+                $row = mysqli_fetch_array($result);
+
+                return  $row['taskpercent'];
+            }
+
+    }
+
+    public function find_pms_task_completed_percent($conn,$p_id,$m_id,$s_id)
+    {
+         $sql= "SELECT SUM(`task_percent`) as taskpercent FROM `task` WHERE p_id = {$p_id} AND `module_id` ={$m_id} AND `submodule_id` = {$s_id} AND status = 2";
+
+                 $result  =  mysqli_query($conn,$sql);
+            if(mysqli_num_rows($result) > 0)
+            {
+                $row = mysqli_fetch_array($result);
+
+                return  $row['taskpercent'];
+            }else
+            return 0.00;
+
+
+
+    }
+
+
+    public function find_pm_submodule_completed_percent($conn,$m_id,$s_id,$status)
+    {
+
+       /* if($status == '1')
+        {
+            $sql = "SELECT SUM(`submodule_com_percent`) as sub_com_percent FROM `sub_module` where module_id = {$m_id}";       
+        }else
+        {*/
+
+        $sql = "SELECT SUM(`submodule_com_percent`) as sub_com_percent FROM `sub_module` where  module_id = {$m_id} AND `sub_mod_id` != {$s_id}";   
+        
+
+        echo $sql ;
+
+        $result = mysqli_query($conn,$sql);
+
+        if(mysqli_num_rows($result) > 0)
+        {
+            $row = mysqli_fetch_array($result);
+
+            return $row['sub_com_percent'];
+        }
+
+    }
+    public function find_pm_submodule_current_percent($conn,$m_id,$s_id,$status)
+    {
+         $sql = "SELECT `submodule_com_percent` FROM `sub_module` where module_id = {$m_id} AND `sub_mod_id` = {$s_id}";   
+        
+
+        echo $sql ;
+
+        $result = mysqli_query($conn,$sql);
+
+        if(mysqli_num_rows($result) > 0)
+        {
+            $row = mysqli_fetch_array($result);
+           
+            return $row['submodule_com_percent'];
+        }
+    }
+
+
+    public function find_pm_module_completed_percent($conn,$p_id,$m_id,$status)
+    {
+
+       /* if($status == '1')
+        {
+            $sql = "SELECT SUM(`module_percent_completed`) as module_percent_completed FROM module where p_id = {$p_id} ";
+
+        }else
+        {*/
+             $sql = "SELECT SUM(`module_percent_completed`)as module_percent_completed FROM module where  `p_id` = {$p_id} AND `module_id` != {$m_id}";
+
+        
+       
+        $result = mysqli_query($conn,$sql);
+        if(mysqli_num_rows($result) > 0)
+        {
+            $row = mysqli_fetch_array($result);
+
+            return $row['module_percent_completed'];
+        }
+    }
+
+    public function find_pm_module_current_percent($conn,$p_id,$m_id,$status)
+    {
+          $sql = "SELECT  module_percent_completed FROM module where p_id = {$p_id} AND module_id = {$m_id}";   
+        
+
+        echo $sql ;
+
+        $result = mysqli_query($conn,$sql);
+
+        if(mysqli_num_rows($result) > 0)
+        {
+            $row = mysqli_fetch_array($result);
+            echo $row['module_percent_completed'];
+            return $row['module_percent_completed'];
+
+        }
+
+    }
+
+
+
+
+
+
+    public function percent_calculation($conn,$p_id,$m_id,$s_id,$t_id,$m_percent,$s_percent,$t_percent,$status)
+    {
+        
+        if($status == 1)
+            {
+                $updated_response = $this->update_task_status($t_id,$status,$conn);
+            }       
+
+          $total_taskpercent =   $this->find_pms_task_totalpercent($conn,$p_id,$m_id,$s_id);  // 80
+
+          $last_completed_percent  = $this->find_pms_task_completed_percent($conn,$p_id,$m_id,$s_id); //40
+          //echo $last_completed_percent;
+              if($status == 1)
+            {
+             }
+            else 
+            {
+              $t_percent = $last_completed_percent+$t_percent; //20+40
+            echo $t_percent;
+            } 
+
+              //echo "t_percent".$t_percent;
+              $task_percent =  number_format(($t_percent/$total_taskpercent)*100,2);  //75
+
+        if($s_id == 1)  
+            {
+                echo "inside".$s_id;
+             $module_current_percent = ($m_percent*($task_percent/100)); // 30
+
+
+                if($status == '1')
+                  {
+                   // $module_total_com_percent = ($module_current_percent - $this->find_pm_module_completed_percent($conn,$p_id,$m_id,$status)); 
+                    
+                    // $this->update_module_percent($conn,$m_id,$module_total_com_percent);
+                    $module_total_com_percent = ($module_current_percent + $this->find_pm_module_completed_percent($conn,$p_id,$m_id,$status)); 
+                    echo "module_total_com".$module_total_com_percent;
+                     $previous_modpercent  =   $this->find_pm_module_current_percent($conn,$p_id,$m_id,$status);
+                        echo "module_prev".$previous_modpercent;
+                        $total_currentmod_percent = $previous_modpercent-$module_current_percent;
+                        echo $total_currentmod_percent;
+
+                      $this->update_module_percent($conn,$m_id,$total_currentmod_percent);
+                      $this->update_percentage_of_project($conn,$p_id,$total_currentmod_percent);
+                 }
+                  else
+                  {
+                     $module_total_com_percent = ($module_current_percent + $this->find_pm_module_completed_percent($conn,$p_id,$m_id,$status)); 
+                     
+                        
+                        $total_currentmod_percent = $module_current_percent;
+
+
+                      $this->update_module_percent($conn,$m_id,$total_currentmod_percent);
+                      $project_percent_completed = $module_total_com_percent;
+
+                    $this->update_percentage_of_project($conn,$p_id,$project_percent_completed);
+                 }
+
+            }
+            else{
+
+              $submod_current_percent = ($s_percent*($task_percent/100)); // 30
+
+              echo "sub_curr".$submod_current_percent;
+
+              
+              // total sumodule percent
+              if($status == '1')
+              { 
+                //$submod_total_com_percent = ($submod_current_percent-$this->find_pm_submodule_completed_percent($conn,$m_id,$s_id,$status));
+               
+                // $this->update_submodule_percent($conn,$s_id,$submod_total_com_percent);
+                $previous_subpercent  =   $this->find_pm_submodule_current_percent($conn,$m_id,$s_id,$status);
+                echo "Prev_perc".$previous_subpercent;
+               
+                $total_currentsub_percent = $previous_subpercent-$submod_current_percent;
+
+                $this->update_submodule_percent($conn,$s_id,$total_currentsub_percent);
+
+
+                $submod_total_com_percent = ($submod_current_percent+$this->find_pm_submodule_completed_percent($conn,$m_id,$s_id,$status)); 
+                echo "sub_tot_".$submod_total_com_percent;
+              }else{
+                $submod_total_com_percent = ($submod_current_percent+$this->find_pm_submodule_completed_percent($conn,$m_id,$s_id,$status));
+                    
+                    //$previous_subpercent  =   $this->find_pm_submodule_current_percent($conn,$m_id,$s_id,$status);
+                    // echo $previous_subpercent;exit;
+                    $total_currentsub_percent = $submod_current_percent;
+                   
+                 $this->update_submodule_percent($conn,$s_id,$total_currentsub_percent);
+              }
+             
+             
+
+
+              echo $m_percent;
+              $module_current_percent =  ($m_percent*($submod_total_com_percent/100)); 
+             
+
+              if($status == '1')
+              {
+               // $module_total_com_percent = ($module_current_percent - $this->find_pm_module_completed_percent($conn,$p_id,$m_id,$status)); 
+                
+                // $this->update_module_percent($conn,$m_id,$module_total_com_percent);
+                $module_total_com_percent = ($module_current_percent + $this->find_pm_module_completed_percent($conn,$p_id,$m_id,$status)); 
+                echo "module_total_com".$module_total_com_percent;
+                 $previous_modpercent  =   $this->find_pm_module_current_percent($conn,$p_id,$m_id,$status);
+                    echo "module_prev".$previous_modpercent;
+                    $total_currentmod_percent = $previous_modpercent-$module_current_percent;
+                    echo $total_currentmod_percent;
+
+                  $this->update_module_percent($conn,$m_id,$total_currentmod_percent);
+                  $this->update_percentage_of_project($conn,$p_id,$total_currentmod_percent);
+             }
+              else
+              {
+                 $module_total_com_percent = ($module_current_percent + $this->find_pm_module_completed_percent($conn,$p_id,$m_id,$status)); 
+                 
+                    
+                    $total_currentmod_percent = $module_current_percent;
+
+
+                  $this->update_module_percent($conn,$m_id,$total_currentmod_percent);
+                  $project_percent_completed = $module_total_com_percent;
+
+                $this->update_percentage_of_project($conn,$p_id,$project_percent_completed);
+             }
     
-    public function subm_count()
-    {
-        $sql = "SELECT MAX(`sub_mod_id`) as SID FROM sub_module";
+    
+    
+     
 
-        $result = mysqli_query($conn,$sql);
-        if(mysqli_num_rows($result) > 0)
-        {
-            $row = mysqli_fetch_array($result);
-            return $row['SID'];
-        } else
-            return 0;
+        }
+
 
     }
-    public function module_count()
-    {
+        
+            
+  
 
-         $sql = "SELECT MAX(`module_id`) as MID FROM module";
-
-        $result = mysqli_query($conn,$sql);
-        if(mysqli_num_rows($result) > 0)
-        {
-            $row = mysqli_fetch_array($result);
-            return $row['MID'];
-        } else
-            return 0;
-    }
+    
+   
+    
+    
+    
     
     
     

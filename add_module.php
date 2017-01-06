@@ -3,46 +3,39 @@ include('config.php');
 include('crud.php');
 $crud = new Crud();
 $project_data = $crud->get_all_project($conn); //
+$error = array();
     if(isset($_POST['save']))
     {
       
         $module_name = mysqli_real_escape_string($conn,$_POST['mname']);
         $pname = mysqli_real_escape_string($conn,$_POST['pname']);
-        $mpercent = mysqli_real_escape_string($conn,$_POST['mpercent']);
-        $data= array('mname'=>$module_name,'pname'=>$pname,'module_percent'=>$mpercent);
+        $mpercent   =   mysqli_real_escape_string($conn,$_POST['mpercent']);
+
+        $data= array('mname'=>$module_name,'pname'=>$pname,'mpercent'=>$mpercent);
     
         if(isset($_GET['medit_id']))
-        {      
-            $id = mysqli_real_escape_string($conn,$_GET['medit_id']);
-            
-            $sum_percent =  $crud->getmodule_percent($conn,$pname,$id); 
-          
-            $totalpercent = $mpercent+$sum_percent; 
-            if($totalpercent <=  100.00)
-                {
-                   $crud->update_module($data,$conn,$id); 
-                   //$crud->update_submodule_percent($conn,$id,$totalpercent);
-                }else
-                {
-                    $error[] = "please assign percent less than current assign";
-                } 
+        {      $id = mysqli_real_escape_string($conn,$_GET['medit_id']);
+
+             $sum_percent = $crud->get_modulepercent_sum($conn,$pname,$id);
+             $totalpercent = $mpercent+$sum_percent;
+
+             if($totalpercent <=  100.00)
+                  {
+                     $crud->update_module($data,$conn,$id); 
+                 }else
+                $error[] = "You can not add Percent more than current Percent";
+
                
         }else
         {
-            $sum_percent =  $crud->getmodule_percent($conn,$pname,0); 
-            $totalpercent = $mpercent+$sum_percent;
-            if($totalpercent <=  100.00)
+           $sum_percent  = $crud->get_modulepercent_sum($conn,$pname,0);
+             $totalpercent = $mpercent+$sum_percent;
+               if($totalpercent <=  100.00)
                   {
-                      $crud->insert_module($data,$conn);  
-                      $last_m_id = $crud->module_count();
-
-                  
-                      $crud->update_module_percent($conn,$last_m_id,$totalpercent);
-
-                  }else
-                    $error[] = "You can not add task ";
-          
-                
+                      $crud->insert_module($data,$conn);     
+                 }else
+                $error[] = "You can not add module to add change existing module percent";
+              
         }
        
          
@@ -61,7 +54,7 @@ if(isset($_GET['medit_id']))
     
     $module_name = $result['module_name'];
   
-    $module_percent = $result['percent_remain_to_complete'];
+    $mpercent   =   $result['module_percent'];
 
     
 }
@@ -105,15 +98,14 @@ if(isset($_GET['medit_id']))
                 <div class="row">
                     <?php echo (isset($m_id)) ? "<h2>Update Module Detail</h2>":"<h2>Add Module</h2>" ?>
                     <div class="col-lg-12">
-                     <?php if(count(@$error) > 0) {  if(isset($sm_id)) { ?>
+                    <form name="f1" method="post" action="<?PHP $_PHP_SELF ?>">
+                         <?php if(count($error) > 0) {  if(isset($m_id)) { ?>
                         <div class="alert alert-danger">
                          <strong>Error!</strong><?php echo $error[0]; ?>.</div> 
                          <?php } else { ?>
                           <div class="alert alert-danger">
                          <strong>Error!</strong><?php echo $error[0]; ?>.</div> 
                          <?php } }?>
-                    <form name="f1" method="post" action="<?PHP $_PHP_SELF ?>">
-                        
                         <div class="form-group">
                             <label for="name">Select Project to assign :</label>
                             <select class="form-control" name="pname" id="mpname">
@@ -129,8 +121,22 @@ if(isset($_GET['medit_id']))
                         </div>
                       
                         <div class="form-group">
-                            <label for="name">Assign Percentage:</label>
-                            <input type="text" min="1" name="mpercent" id="mpercent" class="form-control" value="<?php echo  @$module_percent;?>" >
+                           <label for="submpercent">Module Percent :</label>
+                              <select class="form-control" name="mpercent" id="mpercent">
+                                <option value="0">select</option>
+                                 <option value="10" <?php echo (@$mpercent == "10.00") ? 'selected="selected"' : " " ?>>10</option>
+                                 <option value="20"  <?php echo (@$mpercent == "20.00") ? 'selected="selected"' : " " ?>>20</option>
+                                 <option value="30"  <?php echo (@$mpercent == "30.00") ? 'selected="selected"' : " " ?>>30</option>
+                                 <option value="40"  <?php echo (@$mpercent == "40.00") ? 'selected="selected"' : " "?>>40</option>
+                                <option value="50"  <?php echo (@$mpercent == "50.00") ? 'selected="selected"' : " "?>>50</option>
+                                 <option value="60"  <?php echo (@$mpercent == "60.00") ? 'selected="selected"' : " " ?>>60</option>
+                                <option value="70"  <?php echo (@$mpercent == "70.00") ? 'selected="selected"'  : " "?>>70</option>
+                                 <option value="80"  <?php echo (@$mpercent == "80.00") ? 'selected="selected"' : " " ?>>80</option>
+                                  <option value="90"  <?php echo (@$mpercent == "90.00") ? 'selected="selected"' : " " ?>>90</option>
+                                 <option value="100"  <?php echo (@$mpercent == "100.00") ? 'selected="selected"' : " " ?>>100</option>
+
+                            </select>
+                            
                         </div>
                       
                         
@@ -157,48 +163,6 @@ if(isset($_GET['medit_id']))
       
         
     
-    <script>
-        var remain_percent='';
-     
-    $("#mpname").on('change',function(){
-        
-        var val = $(this).val();
-        if(val == 0)
-        {
-            
-        }else{
-            
-        
-         $.ajax ({
-                    type: 'POST',        
-                    url: 'ajax_function.php',
-                    data: 'p_id_for_per='+val, 
-                   
-                    success: function (data) {
-                       
-                        $('#remain').html("remaining percent:"+data+'%');
-                         if(data == 0)
-                             {
-                                 alert("you cannot add module to this project ");
-                               
-                                 $('input:text').prop("disabled",true);
-                                 $( "input[name='send']" ).prop("disabled",true);
-                                  $('#mpercent').prop("disabled",true);
-                                 
-                             }
-                         
-                    }})    
-        }
-        
-    })
-    
-    
-    if(remain_percent != '')
-    {
-        
-       
-    }
-        
-    </script>
+   
 </body>
 </html>   

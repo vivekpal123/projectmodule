@@ -74,14 +74,14 @@
                     return false;
                 } 
             
-            if(mpercent == '')
+            if(mpercent == '0')
                 {
-                    alert('please enter number from remaining percentage');
+                    alert('please enter percentage');
                     $('#mpercent').focus();
                     return false;
                 }
             
-            
+           
             return true;
            
         }
@@ -97,9 +97,9 @@
             var module_name = $('#module_name').val();
             
             var submname = $('#sub_module').val();
-
-            var submpercent = $("#subpercent").val();
             
+            var subpercent = $("#submpercent").val();
+
             if(module_name == '0')
                 {
                     alert('please select  Module name');
@@ -113,14 +113,14 @@
                     $('#sub_module').focus();
                     return false;
                 }
-            if(submpercent == '')
+            
+            if(subpercent == '0')
             {
-                alert('please enter percentage');
-                $('#subpercent').focus();
+                alert('please select percentage to assign');
+                $("#submpercent").focus();
                 return false;
 
-            }
-
+            }    
             return true;
           
             

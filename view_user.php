@@ -41,7 +41,7 @@ $crud = new Crud();
             
             <tr><td><?php echo $urow['full_name']  ?></td><td><?php echo $urow['email_id'] ?></td><td><?php echo $urow['phone_no'] ?></td>
                       
-            <td><select class="status<?php echo $urow['id']; ?>" ><option value="0" <?php echo ($urow['status'] == '0') ? 'selected="selected"' : " "; ?>>Inactive</option><option value="1"  <?php  echo ($urow['status'] == '1') ? 'selected="selected"' : " "; ?>>Active</option></select>               </td>
+            <td><select class="status<?php echo $urow['id']; ?>" ><option value="2" <?php echo ($urow['status'] == '2') ? 'selected="selected"' : " "; ?>>Inactive</option><option value="1"  <?php  echo ($urow['status'] == '1') ? 'selected="selected"' : " "; ?>>Active</option></select>               </td>
           <td>
             <select class="role<?php echo $urow['id']; ?>">
             <option value="1" <?php echo ($urow['role_assign'] == '1') ? 'selected="selected"' : " "; ?>>Admin</option>
